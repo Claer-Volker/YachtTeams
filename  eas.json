@@ -1,11 +1,13 @@
 {
-    "builds": {
-      "android": {
-        "image": "default"
+    "build": {
+      "development": {
+        "developmentClient": true,
+        "distribution": "internal"
       },
-      "ios": {
-        "image": "default"
-      }
+      "preview": {
+        "distribution": "internal"
+      },
+      "production": {}
     }
   }
   
