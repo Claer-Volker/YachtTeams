@@ -6,8 +6,7 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
         }
-    
-      ], 
+      ],
       [
         "expo-image-picker",
         {
@@ -33,7 +32,8 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yachteams"
     },
     "android": {
       "adaptiveIcon": {
@@ -43,7 +43,8 @@
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
-      ]
+      ],
+      "package": "com.deon_cv.yachtteams"
     },
     "web": {
       "favicon": "./assets/favicon.png"
