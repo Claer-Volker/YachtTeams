@@ -74,7 +74,7 @@ export default function Favourites() {
           <TouchableOpacity>
             <CardItemFav
               userid={item?.userId}
-              image={item?.Pictures[0]}
+              image={item?.Pictures}
               name={item?.UserName}
               isOnline={item?.isOnline}
               hasVariant

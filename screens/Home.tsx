@@ -320,7 +320,7 @@ const Home = () => {
                   }}
                 >
                   <Image
-                    source={{ uri: item?.Pictures[0] }}
+                    source={{ uri: item?.Pictures }}
                     style={{
                       borderRadius: 8,
                       width: "50%",
@@ -376,7 +376,7 @@ const Home = () => {
             //     <Card key={index}>
             //       <CardItem
             //         hasActions
-            //         image={item.Pictures[0]}
+            //         image={item.Pictures}
             //         name={item.UserName}
             //         location={item.location}
             //         description={

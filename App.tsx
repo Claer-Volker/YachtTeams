@@ -11,13 +11,14 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Location from "expo-location";
 import { Provider, useAtom } from "jotai";
 import { phoneLocationAtom } from "./atoms/currentLocationAtom";
-import { auth, db } from "./firebaseConfig";
+import { app, auth, db } from "./firebaseConfig";
 import LoginScreen from "./screens/LoginScreen";
 import EditProfile from "./screens/EditProfile";
 import { userAtom } from "./atoms/userAtom";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { LogBox, SafeAreaView, View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { initializeAuth, getReactNativePersistence } from "firebase/auth";
 
 // const Tabs = AnimatedTabBarNavigator();
 const Tabs = createBottomTabNavigator();
