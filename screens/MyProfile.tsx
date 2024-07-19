@@ -41,7 +41,6 @@ const MyProfile = () => {
   const [user, setUser] = useState(null);
   const [jobTitle, setJobTitle] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [userID, setUserID] = useAtom(userIDAtom);
 
   const [date, setDate] = useState(new Date());
   const [show, setShow] = useState(false);
@@ -113,7 +112,7 @@ const MyProfile = () => {
   }, []);
 
   async function getUsers() {
-    console.log(userID);
+    let userID = auth.currentUser?.uid;
     const q = query(collection(db, "Users"), where("userId", "==", userID));
 
     const querySnapshot = await getDocs(q);
@@ -122,7 +121,7 @@ const MyProfile = () => {
     querySnapshot.forEach((doc) => {
       usersList.push(doc.data()); //
     });
-    console.log("userlistforDeon", usersList[0].userDOB.toDate());
+
     setUser(usersList[0].userId);
     setDate(usersList[0].userDOB.toDate());
     setPhoneNumber(usersList[0].phoneNumber);
@@ -176,10 +175,6 @@ const MyProfile = () => {
 
   useEffect(() => {
     getUsers();
-  }, [userID]);
-
-  useEffect(() => {
-    getUsers();
   }, []);
 
   const pickImage = async () => {
@@ -191,12 +186,10 @@ const MyProfile = () => {
       quality: 1,
     });
 
-    console.log(result);
-
     if (!result.canceled) {
       setPicture(result.assets[0].uri);
       const profilePicture = await uploadImage(result.assets[0].uri);
-      console.log("profilePicture", profilePicture);
+
       const userData = {
         Pictures: profilePicture,
       };
@@ -222,8 +215,6 @@ const MyProfile = () => {
     try {
       await uploadBytes(storageRef, blob);
       const downloadURL: string = await getDownloadURL(storageRef);
-
-      console.log("Download URL: ", downloadURL);
       return downloadURL;
       // Here you can set the download URL in your state or send it to your server
     } catch (error) {

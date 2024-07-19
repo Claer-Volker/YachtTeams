@@ -36,7 +36,7 @@ export default function MessageList() {
           <TouchableOpacity
             style={styles.matchItem}
             onPress={() =>
-              navigation.navigate("MessageDetail", {
+              navigation.navigate("MessagePage", {
                 matchId: item.matchId,
                 userName: item.UserName,
               })

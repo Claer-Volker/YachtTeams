@@ -1,13 +1,15 @@
-import { View, StyleSheet, Text, Button, Dimensions } from "react-native";
 import React, { forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import { View, Text, Button, Dimensions } from "react-native";
+import Slider from "@react-native-community/slider";
+import styles from "../assets/styles";
 import BottomSheet, { useBottomSheet } from "@gorhom/bottom-sheet";
 import MapView, { Circle, Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import { useAtom } from "jotai";
 import { phoneLocationAtom } from "../atoms/currentLocationAtom";
-import Slider from "@react-native-community/slider";
-import styles from "../assets/styles";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
+import { filteredUserListAtoms, userListAtoms } from "../atoms/userListAtoms";
+
 export type Ref = BottomSheet;
 
 interface Props {
@@ -15,19 +17,36 @@ interface Props {
 }
 
 const { width, height } = Dimensions.get("window");
-
 const ASPECT_RATIO = width / height;
 const LATITUDE_DELTA = 0.0922;
 const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
 
 const CloseBtn = () => {
   const { close } = useBottomSheet();
-
   return <Button title="Close" onPress={() => close()} />;
 };
 
+// Function to calculate distance between two coordinates in meters using the Haversine formula
+function haversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371e3; // Radius of the Earth in meters
+  const φ1 = (lat1 * Math.PI) / 180; // φ, λ in radians
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  const distance = R * c; // in meters
+  return distance;
+}
+
 const CustomBottomSheet = forwardRef<Ref, Props>((props, ref) => {
   const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
+  const [users, setUsers] = useAtom(userListAtoms);
+  const [filteredUsers, setFilteredUsers] = useAtom(filteredUserListAtoms);
   const [latitude, setLatitude] = useState(0);
   const [latitudeDelta, setLatitudeDelta] = useState(0);
   const [longitude, setLongitude] = useState(0);
@@ -38,7 +57,6 @@ const CustomBottomSheet = forwardRef<Ref, Props>((props, ref) => {
   const mapRef = useRef<MapView>(null);
 
   const handleSliderChange = (value: number) => {
-    // Round value to nearest 1000
     const roundedValue = Math.round(value / 100) * 100;
     setSliderValue(roundedValue);
   };
@@ -58,147 +76,95 @@ const CustomBottomSheet = forwardRef<Ref, Props>((props, ref) => {
 
   useEffect(() => {
     if (location) {
-      if (sliderValue == maxValue) {
-        const { latitudeDeltaMax, longitudeDeltaMax } = {
-          latitudeDeltaMax: 0,
-          longitudeDeltaMax: 0,
-        };
-        setLatitude(location?.latitude);
-        setLatitudeDelta(latitudeDeltaMax);
-        setLongitude(location?.longitude);
-        setLongitudeDelta(longitudeDeltaMax);
-      } else {
-        const { latitudeDelta, longitudeDelta } = getDeltaFromRadius(
-          latitude,
-          sliderValue
-        );
-        setLatitude(location.latitude);
-        setLatitudeDelta(latitudeDelta);
-        setLongitude(location.longitude);
-        setLongitudeDelta(longitudeDelta);
+      const { latitudeDelta, longitudeDelta } = getDeltaFromRadius(
+        location.latitude,
+        sliderValue
+      );
+      setLatitude(location.latitude);
+      setLatitudeDelta(latitudeDelta);
+      setLongitude(location.longitude);
+      setLongitudeDelta(longitudeDelta);
 
-        if (mapRef.current) {
-          const degreeOffset = sliderValue / 111320; // Approximate conversion of meters to degrees
-          const coordinates = [
-            {
-              latitude: latitude + degreeOffset,
-              longitude: longitude + degreeOffset,
-            },
-            {
-              latitude: latitude - degreeOffset,
-              longitude: longitude - degreeOffset,
-            },
-          ];
-
-          if (mapRef.current) {
-            mapRef.current.fitToCoordinates(coordinates, {
-              edgePadding: {
-                top: 20,
-                right: 20,
-                bottom: 20,
-                left: 20,
-              },
-              animated: true,
-            });
-          }
-        }
-      }
-    }
-  }, [location]);
-
-  useEffect(() => {
-    if (sliderValue !== maxValue) {
-      if (latitude !== 0 && longitude !== 0) {
-        const degreeOffset = sliderValue / 111320; // Approximate conversion of meters to degrees
+      if (mapRef.current) {
+        const degreeOffset = sliderValue / 111320;
         const coordinates = [
           {
-            latitude: latitude + degreeOffset,
-            longitude: longitude + degreeOffset,
+            latitude: location.latitude + degreeOffset,
+            longitude: location.longitude + degreeOffset,
           },
           {
-            latitude: latitude - degreeOffset,
-            longitude: longitude - degreeOffset,
+            latitude: location.latitude - degreeOffset,
+            longitude: location.longitude - degreeOffset,
           },
         ];
 
         if (mapRef.current) {
           mapRef.current.fitToCoordinates(coordinates, {
             edgePadding: {
-              top: 80,
-              right: 40,
-              bottom: 40,
-              left: 40,
+              top: 20,
+              right: 20,
+              bottom: 20,
+              left: 20,
             },
             animated: true,
           });
         }
       }
-    } else {
-      if (mapRef.current) {
-        const globalRegion = {
-          latitude: 0,
-          longitude: 0,
-          latitudeDelta: 180,
-          longitudeDelta: 360,
-        };
-
-        mapRef.current.animateToRegion(globalRegion, 1000);
-      }
     }
-  }, [sliderValue, latitude, longitude]);
+  }, [location, sliderValue]);
+
+  useEffect(() => {
+    const filterUsersByDistance = () => {
+      console.log("sliderValue", sliderValue);
+      console.log("maxValue", maxValue);
+      if (sliderValue == maxValue) {
+        console.log("maxSlider", users);
+        setFilteredUsers(users);
+      } else {
+        if (latitude && longitude && users.length > 0) {
+          const filteredList = users.filter((user) => {
+            const userLocation = user.location;
+            const distance = haversineDistance(
+              latitude,
+              longitude,
+              userLocation.latitude,
+              userLocation.longitude
+            );
+            return distance <= sliderValue;
+          });
+          console.log("filteredList", filteredList);
+          setFilteredUsers(filteredList);
+        }
+      }
+    };
+
+    filterUsersByDistance();
+  }, [sliderValue, latitude, longitude, users]);
 
   const handlePlaceSelect = (data, details) => {
     if (details) {
-      const { lat, lng } = details.geometry.location; // Extract latitude and longitude
-
-      setLatitude(lat); // Update latitude
+      const { lat, lng } = details.geometry.location;
+      setLatitude(lat);
       setLongitude(lng);
       setLocation({
-        latitude: details.geometry.location.lat,
-        longitude: details.geometry.location.lng,
+        latitude: lat,
+        longitude: lng,
       });
-      const degreeOffset = sliderValue / 111320;
-      const coordinates = [
-        {
-          latitude: latitude + degreeOffset,
-          longitude: longitude + degreeOffset,
-        },
-        {
-          latitude: latitude - degreeOffset,
-          longitude: longitude - degreeOffset,
-        },
-      ];
+      const { latitudeDelta, longitudeDelta } = getDeltaFromRadius(
+        lat,
+        sliderValue
+      );
+      setLatitudeDelta(latitudeDelta);
+      setLongitudeDelta(longitudeDelta);
 
       if (mapRef.current) {
         mapRef.current.animateToRegion({
           latitude: lat,
           longitude: lng,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
+          latitudeDelta,
+          longitudeDelta,
         });
       }
-
-      // if (mapRef.current) {
-      //   mapRef.current.fitToCoordinates(coordinates, {
-      //     edgePadding: {
-      //       top: 80,
-      //       right: 40,
-      //       bottom: 40,
-      //       left: 40,
-      //     },
-      //     animated: true,
-      //   });
-      // } // Update longitude
-
-      // // Optionally animate to the selected place
-      // if (mapRef.current) {
-      //   mapRef.current.animateToRegion({
-      //     latitude: lat,
-      //     longitude: lng,
-      //     latitudeDelta: 0.05,
-      //     longitudeDelta: 0.05,
-      //   });
-      // }
     }
   };
 
@@ -219,7 +185,6 @@ const CustomBottomSheet = forwardRef<Ref, Props>((props, ref) => {
             left: 0,
             right: 0,
             zIndex: 1000,
-            padding: 10,
             width: "100%",
           }}
         >
@@ -269,30 +234,13 @@ const CustomBottomSheet = forwardRef<Ref, Props>((props, ref) => {
                 color: "#1faadb",
               },
             }}
-            // onPress={(data, details = null) => {
-            //   if (data) {
-
-            //     // const { lat, lng } = details.geometry.location;
-            //     // setLatitude(lat);
-            //     // setLongitude(lng);
-            //   }
-            // }}
-            // onPress={async (data, details = null) => {
-            //   let latitude = details.geometry.location.lat;
-            //   let longitude = details.geometry.location.lng;
-            //   let coordObj = { latitude, longitude };
-            //   const address = await Location.reverseGeocodeAsync(coordObj);
-            //   let city = address[0].city;
-            //   setLocation(data.description);
-            //   setCity(city);
-            // }}
             fetchDetails={true}
             onPress={handlePlaceSelect}
             GooglePlacesDetailsQuery={{
               fields: "geometry",
             }}
             query={{
-              key: "AIzaSyCA1P52HiFWFh-Qyt7V45eUDTdmkGx43ic",
+              key: "YOUR_GOOGLE_API_KEY",
               language: "en",
             }}
           />
@@ -303,14 +251,14 @@ const CustomBottomSheet = forwardRef<Ref, Props>((props, ref) => {
           center={{
             latitude: latitude,
             longitude: longitude,
-            latitudeDelta: LONGITUDE_DELTA,
-            longitudeDelta: LATITUDE_DELTA,
+            latitudeDelta: latitudeDelta,
+            longitudeDelta: longitudeDelta,
           }}
           initialRegion={{
             latitude: latitude,
             longitude: longitude,
-            latitudeDelta: LONGITUDE_DELTA,
-            longitudeDelta: LATITUDE_DELTA,
+            latitudeDelta: LATITUDE_DELTA,
+            longitudeDelta: LONGITUDE_DELTA,
           }}
           customMapStyle={{
             elementType: "labels.icon",
@@ -338,8 +286,6 @@ const CustomBottomSheet = forwardRef<Ref, Props>((props, ref) => {
               center={{
                 latitude: latitude,
                 longitude: longitude,
-                latitudeDelta: LONGITUDE_DELTA,
-                longitudeDelta: LATITUDE_DELTA,
               }}
               radius={sliderValue}
               strokeWidth={3}

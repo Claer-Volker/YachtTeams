@@ -6,16 +6,13 @@ import {
   SafeAreaView,
   Text,
   StyleSheet,
-  Dimensions,
   TouchableOpacity,
   RefreshControl,
 } from "react-native";
-import CardStack, { Card } from "react-native-card-stack-swiper";
-import { City, Filters, CardItem, Icon } from "../components";
+import { City, Filters, Icon } from "../components";
 import styles, {
   DARK_GRAY,
   DISLIKE_ACTIONS,
-  FLASH_ACTIONS,
   LIKE_ACTIONS,
   STAR_ACTIONS,
 } from "../assets/styles";
@@ -38,52 +35,56 @@ import { useAtom } from "jotai";
 import { phoneLocationAtom } from "../atoms/currentLocationAtom";
 import FilterBottomSheet from "../components/FilterSheet";
 import { FlatList } from "react-native-gesture-handler";
-import { userIDAtom } from "../atoms/userAtom";
-
-const fullWidth = Dimensions.get("window").width;
+import { filteredUserListAtoms, userListAtoms } from "../atoms/userListAtoms";
 
 const Home = () => {
-  const [swiper, setSwiper] = useState<CardStack | null>(null);
   const bottomSheetRef = useRef<BottomSheet>();
   const filterSheetRef = useState<BottomSheet>();
-  const [title, setTitle] = useState("Passing my data 🔥");
-  const [users, setUsers] = useState<any[]>([]);
+
+  const [users, setUsers] = useAtom(userListAtoms);
+  const [filteredUsers, setFilteredUsers] = useAtom(filteredUserListAtoms);
   const [location, setLocation] = useAtom(phoneLocationAtom);
-  const [userID, setUserID] = useAtom(userIDAtom);
+
   const [city, setCity] = useState("Loading...");
   const [refreshing, setRefreshing] = useState(true);
 
-  // async function getUsers() {
-  //   const querySnapshot = await getDocs(collection(db, "Users"));
-  //   const userID = auth.currentUser?.uid;
-  //   if (!auth.currentUser) {
-  //     const usersList: any[] = [];
-  //     console.log("user is not signed in");
-  //     querySnapshot.forEach((doc) => {
-  //       usersList.push(doc.data()); //
-  //     });
+  const fetchCurrentLocation = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      console.log("Permission to access location was denied");
+      return;
+    }
 
-  //     setUsers(usersList);
-  //   } else {
-  //     console.log("User is signed in");
+    let currentLocation = await Location.getCurrentPositionAsync({});
 
-  //     const filteredDocs = querySnapshot.docs.filter(
-  //       (doc) => !doc.data().ignored.includes(userID)
-  //     );
-  //     const usersList: any[] = [];
+    setLocation({
+      latitude: currentLocation.coords.latitude,
+      longitude: currentLocation.coords.longitude,
+    });
+    const user = auth.currentUser;
+    if (user) {
+      const userRef = doc(db, "Users", user.uid); // Assuming userID is the document ID
+      await updateDoc(userRef, {
+        location: {
+          latitude: currentLocation.coords.latitude,
+          longitude: currentLocation.coords.longitude,
+        },
+      });
+    }
+  };
 
-  //     filteredDocs.forEach((doc) => {
-  //       usersList.push(doc.data()); //
-  //     });
+  useEffect(() => {
+    fetchCurrentLocation();
+    console.log("location", location);
+  }, [auth.currentUser]);
 
-  //     // console.log(users);
-  //     setUsers(usersList);
-  //   }
-  // }
+  useEffect(() => {
+    fetchCurrentLocation();
+  }, []);
 
   async function getUsers() {
-    const usersRef = collection(db, "Users"); // Replace with your Firestore instance and collection name
-    const userID = auth.currentUser?.uid; // Replace with the userID you're checking against
+    const usersRef = collection(db, "Users");
+    const userID = auth.currentUser?.uid;
     fetchUsersNotIgnoring(usersRef, userID)
       .then((filteredDocs) => {
         const usersList: any[] = [];
@@ -97,8 +98,9 @@ const Home = () => {
           }
         });
         setRefreshing(false);
-        // console.log(users);
+        console.log(users);
         setUsers(usersList);
+        // setFilteredUsers(usersList);
       })
       .catch((error) => {
         console.error("Error in fetchUsersNotIgnoring:", error);
@@ -202,10 +204,6 @@ const Home = () => {
   }, []);
 
   useEffect(() => {
-    getUsers();
-  }, [auth.currentUser]);
-
-  useEffect(() => {
     getCity();
   }, [location]);
 
@@ -260,7 +258,7 @@ const Home = () => {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, height: "100%" }}>
+    <SafeAreaView style={{ flex: 1, height: "100%", width: "100%" }}>
       <ImageBackground
         source={require("../assets/images/bg.png")}
         style={styles.bg}
@@ -293,7 +291,7 @@ const Home = () => {
           {users?.length > 0 && (
             //  {refreshing ? <ActivityIndicator /> : null}
             <FlatList
-              data={users}
+              data={filteredUsers}
               // onRefresh={() => getUsers()}
               renderItem={({ item }) => (
                 <View
