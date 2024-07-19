@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "245063412732",
+    "project_id": "yacht-teams",
+    "storage_bucket": "yacht-teams.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:245063412732:android:ee4b485ab84c90c86ba079",
+        "android_client_info": {
+          "package_name": "com.claervolker.yachtteams"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCm_EkII7maOhCy6rtQOARk842HnIwhdpM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

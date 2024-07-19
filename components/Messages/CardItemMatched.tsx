@@ -90,7 +90,7 @@ const CardItemMatched = ({
           style={styles.roundedButton}
           onPress={() =>
             navigation.navigate("Chat", {
-              matchId: matchId,
+              matchId matchId,
               userName: name,
             })
           }

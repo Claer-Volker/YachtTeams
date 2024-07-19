@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   ScrollView,
   Text,
@@ -11,51 +11,48 @@ import {
 import { Icon, Message } from "../components";
 import DEMO from "../assets/data/demo";
 import styles, { DARK_GRAY } from "../assets/styles";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import MessageList from "../components/Messages/MessageList";
+import MessageDetail from "../components/Messages/MessageDetail";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
-const DEMO2 = [];
-const Messages = () => (
-  <SafeAreaView style={styles.bg}>
-    <ImageBackground
-      source={require("../assets/images/bg.png")}
-      style={styles.bg}
-    >
-      <View style={styles.containerMessages}>
-        <View style={styles.top}>
-          <Text style={styles.title}>Messages</Text>
-          <TouchableOpacity>
-            <Icon name="ellipsis-vertical" color={DARK_GRAY} size={20} />
-          </TouchableOpacity>
-        </View>
+const MatchesStack = createNativeStackNavigator();
 
-        <FlatList
-          data={DEMO2}
-          keyExtractor={(item, index) => index.toString()}
-          ListEmptyComponent={
-            <View
-              style={{
-                flex: 1,
-                justifyContent: "center",
-                alignItems: "center",
-                height: 500,
-                // backgroundColor: "#000",
-              }}
-            >
-              <Text>No messages</Text>
-            </View>
-          }
-          renderItem={({ item }) => (
-            <TouchableOpacity>
-              <Message
-                image={item.image}
-                name={item.name}
-                lastMessage={item.message}
-              />
-            </TouchableOpacity>
-          )}
-        />
-      </View>
-    </ImageBackground>
-  </SafeAreaView>
-);
+const Messages = () => {
+  const navigation = useNavigation();
+  const route = useRoute();
+  const { matchId, userName } = route?.params || {};
+
+  useEffect(() => {
+    console.log("Messages");
+
+    if (matchId === undefined) {
+      navigation.navigate("Messages");
+    } else {
+      navigation.navigate("MessagePage", {
+        matchId: matchId,
+        userName: userName,
+      });
+    }
+  }, [matchId]);
+
+  return (
+    <SafeAreaView style={styles.bg}>
+      <MatchesStack.Navigator
+        screenOptions={({ route }) => ({
+          tabBarStyle: {
+            display: route.name === "EditProfile" ? "none" : "flex",
+          },
+          headerShown: false,
+          tabBarActiveTintColor: "#1cb8c4",
+          tabBarInactiveTintColor: "#223322",
+        })}
+      >
+        <MatchesStack.Screen name="Messages" component={MessageList} />
+        <MatchesStack.Screen name="MessagePage" component={MessageDetail} />
+      </MatchesStack.Navigator>
+    </SafeAreaView>
+  );
+};
 
 export default Messages;

@@ -40,13 +40,14 @@ export default function Matched() {
       ]);
 
       const matches = [
-        ...querySnapshot1.docs.map((doc) => doc.data()),
-        ...querySnapshot2.docs.map((doc) => doc.data()),
+        ...querySnapshot1.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+        ...querySnapshot2.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
       ];
 
-      const matchedUserIds = matches.map((match) =>
-        match.user1 === currentUserUid ? match.user2 : match.user1
-      );
+      const matchedUserIds = matches.map((match) => ({
+        matchId: match.id,
+        userId: match.user1 === currentUserUid ? match.user2 : match.user1,
+      }));
 
       return matchedUserIds;
     } catch (error) {
@@ -55,7 +56,8 @@ export default function Matched() {
     }
   };
 
-  const fetchUserProfiles = async (userIds: string[]) => {
+  const fetchUserProfiles = async (matches) => {
+    const userIds = matches.map((match) => match.userId);
     if (userIds.length === 0) return [];
 
     try {
@@ -68,6 +70,7 @@ export default function Matched() {
       const profiles = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
+        matchId: matches.find((match) => match.userId === doc.id).matchId,
       }));
       return profiles;
     } catch (error) {
@@ -86,6 +89,7 @@ export default function Matched() {
   useEffect(() => {
     fetchMatchedUserProfiles();
   }, []);
+
   return (
     <View>
       <FlatList
@@ -108,10 +112,11 @@ export default function Matched() {
         renderItem={({ item }) => (
           <TouchableOpacity>
             <CardItemMatched
-              userid={item?.userId}
-              image={item?.Pictures}
-              name={item?.UserName}
-              isOnline={item?.isOnline}
+              matchId={item.matchId}
+              userid={item.id}
+              image={item.Pictures}
+              name={item.UserName}
+              isOnline={item.isOnline}
               hasVariant
             />
           </TouchableOpacity>
